@@ -37,20 +37,20 @@ split evenly between treatments
 library(dplyr)
 set.seed(123)
 
-n <- 1000
+n <- 200
 
-lambda <- 0.6
+lambda <- 0.5
 
 n1 <- n * lambda
 n2 <- n * (1 - lambda)
 
-mu_A_S1 <- 5
-mu_A_S2 <- 6
+mu_A_S1 <- 10
+mu_A_S2 <- 10
 
-mu_B_S1 <- 7
-mu_B_S2 <- 8
+mu_B_S1 <- 0
+mu_B_S2 <- 0
 
-sd <- 1
+sd <- 22
 
 
 
@@ -150,4 +150,34 @@ simes_method <- function(p1, p3) {
 }
 
 ```
+
+
+
+```{r}
+simes_method(p1, p3)
+```
+
+
+
+Weighted inverse normal method
+
+
+How should weights be chosen - wrt sample size
+
+```{r win method}
+
+win <- function(z_1, z_2){
+  w1 <- 1/sqrt(2)
+  w2 <- 1/sqrt(2)
+  
+  zc <- w1*z_1 + w2*z_2
+  
+  pc <- 1 - pnorm(zc)
+  
+  return(list(zc = zc, pc = pc))
+}
+
+
+```
+
 

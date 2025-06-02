@@ -64,3 +64,17 @@ simes_method <- function(p1, p3) {
   
   return(p13)
 }
+
+# Weighted inverse normal method
+
+win <- function(z_1, z_2){
+  # CHANGE WEIGHTS LATER
+  w1 <- 1/sqrt(2)
+  w2 <- 1/sqrt(2)
+  
+  zc <- w1*z_1 + w2*z_2
+  
+  pc <- 1 - pnorm(zc)
+  
+  return(list(zc = zc, pc = pc))
+}
