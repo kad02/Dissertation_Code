@@ -1,0 +1,153 @@
+---
+title: "Code"
+output: html_document
+date: "2025-06-02"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Testing
+
+Simulating the trial:
+
+
+2 subpopulations
+
+2 treatments
+
+means for each subpopulation on each treatment
+
+common variance
+
+
+
+in rnorm, n is the sample size for each subpopulation-treatment combination
+
+simulation repications comes after this, interested in base function first
+
+output theta1, theta2, theta3
+
+given lambda?
+
+split evenly between treatments
+
+```{r base trial and effects}
+library(dplyr)
+set.seed(123)
+
+n <- 1000
+
+lambda <- 0.6
+
+n1 <- n * lambda
+n2 <- n * (1 - lambda)
+
+mu_A_S1 <- 5
+mu_A_S2 <- 6
+
+mu_B_S1 <- 7
+mu_B_S2 <- 8
+
+sd <- 1
+
+
+
+subpopulations <- c("S1", "S2")
+treatments <- c("A", "B")
+
+
+A_S1 <- rnorm(n1/2, mean = mu_A_S1, sd = sd)
+B_S1 <- rnorm(n1/2, mean = mu_B_S1, sd = sd)
+
+A_S2 <- rnorm(n2/2, mean = mu_A_S2, sd = sd)
+B_S2 <- rnorm(n2/2, mean = mu_B_S2, sd = sd)
+
+
+
+# Make the above into a function
+
+simulate_trial <- function(n, lambda, mu_A_S1, mu_A_S2, mu_B_S1, mu_B_S2, sd) {
+  n1 <- n * lambda
+  n2 <- n * (1 - lambda)
+  
+  A_S1 <- rnorm(n1/2, mean = mu_A_S1, sd = sd)
+  B_S1 <- rnorm(n1/2, mean = mu_B_S1, sd = sd)
+  
+  A_S2 <- rnorm(n2/2, mean = mu_A_S2, sd = sd)
+  B_S2 <- rnorm(n2/2, mean = mu_B_S2, sd = sd)
+  
+  return(list(A_S1 = A_S1, B_S1 = B_S1, A_S2 = A_S2, B_S2 = B_S2))
+}
+
+
+
+
+
+mu_hat_A_S1 <- mean(A_S1)
+mu_hat_B_S1 <- mean(B_S1)
+
+mu_hat_A_S2 <- mean(A_S2)
+mu_hat_B_S2 <- mean(B_S2)
+
+
+theta1 <- mu_hat_A_S1 - mu_hat_B_S1
+theta2 <- mu_hat_A_S2 - mu_hat_B_S2
+
+theta3 <- lambda * theta1 + (1 - lambda) * theta2
+
+# make the above into a function
+
+calculate_thetas <- function(A_S1, B_S1, A_S2, B_S2, lambda) {
+  mu_hat_A_S1 <- mean(A_S1)
+  mu_hat_B_S1 <- mean(B_S1)
+  
+  mu_hat_A_S2 <- mean(A_S2)
+  mu_hat_B_S2 <- mean(B_S2)
+  
+  theta1 <- mu_hat_A_S1 - mu_hat_B_S1
+  theta2 <- mu_hat_A_S2 - mu_hat_B_S2
+  
+  theta3 <- lambda * theta1 + (1 - lambda) * theta2
+  
+  return(list(theta1 = theta1, theta2 = theta2, theta3 = theta3))
+}
+```
+
+
+
+now we have estimated effects, z and p values
+
+```{r calculate z and p values}
+z1 <- (sqrt(lambda*n)*theta1)/(2*sd)
+
+z3 <- (sqrt(n)*theta3)/(2*sd)
+
+
+p1 <- 1 - pnorm(z1)
+p3 <- 1 - pnorm(z3)
+
+# make the above into a function
+calculate_z_p <- function(theta1, theta3, n, lambda, sd) {
+  z1 <- (sqrt(lambda * n) * theta1) / (2 * sd)
+  z3 <- (sqrt(n) * theta3) / (2 * sd)
+  
+  p1 <- 1 - pnorm(z1)
+  p3 <- 1 - pnorm(z3)
+  
+  return(list(z1 = z1, z3 = z3, p1 = p1, p3 = p3))
+}
+```
+
+simes method
+
+```{r simes method}
+simes_method <- function(p1, p3) {
+  p13 <- min(2*min(p1,p3),max(p1, p3))
+  
+  return(p13)
+}
+
+```
+
