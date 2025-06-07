@@ -43,8 +43,101 @@ hat_theta3
 
 ```
 
+## Stage 1:
 
 ```{r}
+tau <- 0.5
+lambda <- 0.5
+n <- 200
+sigma <- 22
 
+theta1 <- 0
+theta2 <- 10
+########
+
+theta3 <- lambda*theta1 + (1-lambda)*theta2
+
+hat_theta1_1 <- rnorm(1, mean = theta1, sd = sqrt((4*sigma^2)/(tau*lambda*n)))
+hat_theta2_1 <- rnorm(1, mean = theta2, sd = sqrt((4*sigma^2)/(tau*(1-lambda)*n)))
+hat_theta3_1 <- rnorm(1, mean = theta3, sd = sqrt((4*sigma^2)/(tau*n)))
 ```
+
+
+
+## Stage 2:
+
+### No Enrichment:
+
+```{r}
+hat_theta1_2 <- rnorm(1, mean = theta1, sd = sqrt((4*sigma^2)/((1-tau)*lambda*n)))
+hat_theta2_2 <- rnorm(1, mean = theta2, sd = sqrt((4*sigma^2)/((1-tau)*(1-lambda)*n)))
+hat_theta3_2 <- rnorm(1, mean = theta3, sd = sqrt((4*sigma^2)/((1-tau)*n)))
+```
+
+### Enrichment:
+
+```{r}
+hat_theta1_2_enrich <- rnorm(1, mean = theta1, sd = sqrt((4*sigma^2)/((1-tau)*n)))
+```
+
+
+
+
+
+
+
+
+
+
+```{r}
+# Do a trial
+n <- 200
+lambda <- 0.5
+tau <- 0.5
+sigma <- 22
+theta1 <- 0
+theta2 <- 10
+
+stage_one <- StageOne(n, lambda, tau, sigma, theta1, theta2)
+stage_one
+
+stage_one_z_p <- StageOne_Z_P(n, lambda, tau, sigma, stage_one$hat_theta1_1, stage_one$hat_theta2_1, stage_one$hat_theta3_1)
+stage_one_z_p
+
+comb_p <- simes_method(stage_one_z_p$P1_1, stage_one_z_p$P3_1)
+comb_p
+
+enrich <- Decision_identity(stage_one$hat_theta1_1, stage_one$hat_theta3_1)
+enrich
+
+if (enrich) {
+  stage_two_enrich <- StageTwo_Enrich(n, tau, sigma, theta1)
+  stage_two_enrich
+} else {
+  stage_two_no_enrich <- StageTwo_NoEnrich(n, lambda, tau, sigma, stage_one$hat_theta1_1, stage_one$hat_theta2_1)
+  stage_two_no_enrich
+}
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
