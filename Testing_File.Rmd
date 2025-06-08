@@ -97,26 +97,6 @@ tau <- 0.5
 sigma <- 22
 theta1 <- 0
 theta2 <- 10
-
-stage_one <- StageOne(n, lambda, tau, sigma, theta1, theta2)
-stage_one
-
-stage_one_z_p <- StageOne_Z_P(n, lambda, tau, sigma, stage_one$hat_theta1_1, stage_one$hat_theta2_1, stage_one$hat_theta3_1)
-stage_one_z_p
-
-comb_p <- simes_method(stage_one_z_p$P1_1, stage_one_z_p$P3_1)
-comb_p
-
-enrich <- Decision_identity(stage_one$hat_theta1_1, stage_one$hat_theta3_1)
-enrich
-
-if (enrich) {
-  stage_two_enrich <- StageTwo_Enrich(n, tau, sigma, theta1)
-  stage_two_enrich
-} else {
-  stage_two_no_enrich <- StageTwo_NoEnrich(n, lambda, tau, sigma, stage_one$hat_theta1_1, stage_one$hat_theta2_1)
-  stage_two_no_enrich
-}
 ```
 
 
@@ -127,17 +107,214 @@ if (enrich) {
 
 
 
+Try to make it into data frames for vector calcs
+
+```{r}
+library(tidyverse)
+```
+
+```{r}
+theta3 <- lambda * theta1 + (1 - lambda) * theta2
+  
+# Simulate the trial
+hat_theta1_1 <- rnorm(5, mean = theta1, sd = sqrt((4*sigma^2)/(tau*lambda*n)))
+hat_theta2_1 <- rnorm(5, mean = theta2, sd = sqrt((4*sigma^2)/(tau*(1-lambda)*n)))
+hat_theta3_1 <- rnorm(5, mean = theta3, sd = sqrt((4*sigma^2)/(tau*n)))
+  
+dat <- data.frame(
+  stage = "Stage 1",
+  hat_theta1_1 = hat_theta1_1,
+  hat_theta2_1 = hat_theta2_1,
+  hat_theta3_1 = hat_theta3_1
+)
+dat
+```
+```{r}
+# Add z-values and p-values to the data frame
+
+dat <- dat %>%
+  mutate(
+    z1_1 = (sqrt(lambda*tau*n)*hat_theta1_1)/(2*sigma),
+    z3_1 = (sqrt(tau*n)*hat_theta3_1)/(2*sigma),
+    p1_1 = 1 - pnorm(z1_1),
+    p3_1 = 1 - pnorm(z3_1),
+    p_13_1 = simes_method(p1_1, p3_1)
+  )
+
+
+dat
+```
+
+
+
+
+STAGE 2
+
+```{r}
+dat2 <- data.frame(
+    stage = "Stage 2",
+    hat_theta1_2 = rnorm(5, mean = theta1, sd = sqrt((4*sigma^2)/((1-tau)*lambda*n))),
+    hat_theta2_2 = rnorm(5, mean = theta2, sd = sqrt((4*sigma^2)/((1-tau)*(1-lambda)*n))),
+    hat_theta3_2 = rnorm(5, mean = theta3, sd = sqrt((4*sigma^2)/((1-tau)*n)))
+  )
+dat2
+```
+```{r}
+dat2 <- dat2 %>%
+  mutate(
+    z1_2 = (sqrt((1-tau)*lambda*n)*hat_theta1_2)/(2*sigma),
+    z3_2 = (sqrt((1-tau)*n)*hat_theta3_2)/(2*sigma),
+    p1_2 = 1 - pnorm(z1_2),
+    p3_2 = 1 - pnorm(z3_2),
+    p_13_2 = simes_method(p1_2, p3_2),
+    enrich = rep(FALSE, 5)
+  )
+dat2
+```
+
+```{r}
+dat2e <- data.frame(
+    stage = "Stage 2",
+    hat_theta1_2 = rnorm(5, mean = theta1, sd = sqrt((4*sigma^2)/((1-tau)*n)))
+  )
+dat2e
+```
+```{r}
+dat2e <- dat2e %>%
+  mutate(
+    z1_2 = (sqrt((1-tau)*n)*hat_theta1_2)/(2*sigma),
+    p1_2 = 1 - pnorm(z1_2),
+    p_13_2 = p1_2,
+    enrich = rep(TRUE, 5)
+  )
+dat2e
+```
+
+
+
+```{r}
+dat_full <- bind_rows(dat, dat2, dat2e)
+dat_full
+```
+
+```{r}
+dat_full <- dat_full %>%
+  mutate(
+    P_13_1 = simes_method(p1_1, p3_1)
+  )
+
+dat_full
+```
 
 
 
 
 
+```{r}
+dat <- StageOne(n_sim = 5, n = 200, lambda = 0.5, tau = 0.5, sigma = 22, theta1 = 0, theta2 = 10)
+dat
+```
 
 
 
+col enrich - t or f
+
+ideally do it without if else
+
+reorder, group all t and all f
+
+get num for each
+
+use as num sim for stage 2 for each
 
 
 
+```{r}
+dat <- dat %>%
+  arrange(
+    enrich
+  )
+dat
+```
+
+```{r}
+num_enrich <- sum(dat$enrich)
+num_not <- nrow(dat) - num_enrich
+
+
+no_en <- StageTwo_NoEnrich(num_not, n = 200, lambda = 0.5, tau = 0.5, sigma = 22, theta1 = 0, theta2 = 10)
+
+en <- StageTwo_Enrich(num_enrich, n = 200, tau = 0.5, sigma = 22, theta1 = 0)
+
+
+dat2 <- bind_rows(no_en, en)
+dat2
+```
+```{r}
+dat_full <- bind_cols(dat, dat2)
+dat_full
+```
+
+Now we need to find the combined z and p values
+
+```{r}
+ws_no <- weights(FALSE, lambda, tau)
+ws_en <- weights(TRUE, lambda, tau)
+
+dat_full_no <- dat_full %>%
+  filter(enrich == FALSE)
+
+dat_full_en <- dat_full %>%
+  filter(enrich == TRUE)
+
+
+dat_full_no <- dat_full_no %>%
+  mutate(
+    z1_c = win(z1_1, z1_2, ws_no$w1, ws_no$w2),
+    z3_c = win(z3_1, z3_2, ws_no$w1, ws_no$w2),
+    z13_c = win_p(p_13_1, p_13_2, ws_no$w1, ws_no$w2),
+    p1_c = 1 - pnorm(z1_c),
+    p3_c = 1 - pnorm(z3_c),
+    p13_c = 1 - pnorm(z13_c)
+  )
+
+dat_full_en <- dat_full_en %>%
+  mutate(
+    z1_c = win(z1_2, z1_2, ws_en$w1, ws_en$w2),
+    z13_c = win_p(p_13_2, p_13_2, ws_en$w1, ws_en$w2),
+    p1_c = 1 - pnorm(z1_c),
+    p13_c = 1 - pnorm(z13_c)
+  )
+
+
+dat_full_combined <- bind_rows(dat_full_no, dat_full_en)
+dat_full_combined
+```
+
+
+```{r}
+dat_full_combined <- Comb(dat_full, lambda, tau)
+dat_full_combined
+```
+
+
+
+So the full trial can be done by:
+```{r}
+library(tidyverse)
+n <- 200
+lambda <- 0.5
+tau <- 0.5
+sigma <- 22
+theta1 <- 0
+theta2 <- 10
+n_sim <- 100
+
+
+trial <- Trial(n_sim, n, lambda, tau, sigma, theta1, theta2)
+
+trial
+```
 
 
 
