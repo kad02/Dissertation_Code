@@ -7,7 +7,9 @@ StageOne <- function(n_sim, n, lambda, tau, sigma, theta1, theta2){
   # Simulate the trial
   hat_theta1_1 <- rnorm(n_sim, mean = theta1, sd = sqrt((4*sigma^2)/(tau*lambda*n)))
   hat_theta2_1 <- rnorm(n_sim, mean = theta2, sd = sqrt((4*sigma^2)/(tau*(1-lambda)*n)))
-  hat_theta3_1 <- rnorm(n_sim, mean = theta3, sd = sqrt((4*sigma^2)/(tau*n)))
+  #hat_theta3_1 <- rnorm(n_sim, mean = theta3, sd = sqrt((4*sigma^2)/(tau*n)))
+  
+  hat_theta3_1 <- lambda * hat_theta1_1 + (1 - lambda) * hat_theta2_1
   
   dat <- data.frame(
     hat_theta1_1 = hat_theta1_1,
@@ -35,11 +37,13 @@ StageTwo_NoEnrich <- function(n_not, n, lambda, tau, sigma, theta1, theta2) {
   # Calculate theta3
   theta3 <- lambda * theta1 + (1 - lambda) * theta2
   
+  #hat_theta3_2 = rnorm(n_not, mean = theta3, sd = sqrt((4*sigma^2)/((1-tau)*n))),
+  
   # Simulate the trial
   no_en <- data.frame(
     hat_theta1_2 = rnorm(n_not, mean = theta1, sd = sqrt((4*sigma^2)/((1-tau)*lambda*n))),
     hat_theta2_2 = rnorm(n_not, mean = theta2, sd = sqrt((4*sigma^2)/((1-tau)*(1-lambda)*n))),
-    hat_theta3_2 = rnorm(n_not, mean = theta3, sd = sqrt((4*sigma^2)/((1-tau)*n)))
+    hat_theta3_2 = lambda * hat_theta1_2 + (1 - lambda) * hat_theta2_2
   ) %>%
     mutate(
       z1_2 = (sqrt((1-tau)*lambda*n)*hat_theta1_2)/(2*sigma),
@@ -94,13 +98,16 @@ win_p <- function(p_1, p_2, w1, w2){
 
 
 weights <- function(Enrich, lambda, tau){
-  if (Enrich) {
-    w1 <- sqrt((tau*lambda)/(tau*lambda-tau+1))
-    w2 <- sqrt((1-tau)/(tau*lambda-tau+1))
-  } else {
-    w1 <- sqrt(tau)
-    w2 <- sqrt(1 - tau)
-  }
+  #if (Enrich) {
+  #  w1 <- sqrt((tau*lambda)/(tau*lambda-tau+1))
+  #  w2 <- sqrt((1-tau)/(tau*lambda-tau+1))
+  #} else {
+  #  w1 <- sqrt(tau)
+  #  w2 <- sqrt(1 - tau)
+  #}
+  
+  w1 <- sqrt(tau)
+  w2 <- sqrt(1 - tau)
   
   return(list(w1 = w1, w2 = w2))
 }
