@@ -63,6 +63,7 @@ StageTwo_Enrich <- function(n_en, n, tau, sigma, theta1) {
   ) %>%
     mutate(
       z1_2 = (sqrt((1-tau)*n)*hat_theta1_2)/(2*sigma),
+      z3_2 = -Inf,
       p1_2 = 1 - pnorm(z1_2),
       p3_2 = 1,  # p3 is not used in this case
       p_13_2 = p1_2
@@ -97,7 +98,7 @@ win_p <- function(p_1, p_2, w1, w2){
 }
 
 
-weights <- function(Enrich, lambda, tau){
+weights <- function(lambda, tau){
   #if (Enrich) {
   #  w1 <- sqrt((tau*lambda)/(tau*lambda-tau+1))
   #  w2 <- sqrt((1-tau)/(tau*lambda-tau+1))
@@ -123,37 +124,18 @@ Decision_identity <- function(hat_theta1, hat_theta3){
 
 # Combination stuff
 Comb <- function(data, lambda, tau){
-  ws_no <- weights(FALSE, lambda, tau)
-  ws_en <- weights(TRUE, lambda, tau)
+  ws <- weights(lambda, tau)
   
-  dat_full_no <- data %>%
-    filter(enrich == FALSE)
-  
-  dat_full_en <- data %>%
-    filter(enrich == TRUE)
-  
-  
-  dat_full_no <- dat_full_no %>%
+  data <- data %>%
     mutate(
-      z1_c = win(z1_1, z1_2, ws_no$w1, ws_no$w2),
-      z3_c = win(z3_1, z3_2, ws_no$w1, ws_no$w2),
-      z13_c = win_p(p_13_1, p_13_2, ws_no$w1, ws_no$w2),
+      z1_c = win(z1_1, z1_2, ws$w1, ws$w2),
+      z3_c = win(z3_1, z3_2, ws$w1, ws$w2),
+      z13_c = win_p(p_13_1, p_13_2, ws$w1, ws$w2),
       p1_c = 1 - pnorm(z1_c),
       p3_c = 1 - pnorm(z3_c),
       p13_c = 1 - pnorm(z13_c)
     )
-  
-  dat_full_en <- dat_full_en %>%
-    mutate(
-      z1_c = win(z1_2, z1_2, ws_en$w1, ws_en$w2),
-      z13_c = win_p(p_13_2, p_13_2, ws_en$w1, ws_en$w2),
-      p1_c = 1 - pnorm(z1_c),
-      p13_c = 1 - pnorm(z13_c)
-    )
-  
-  
-  dat_full_combined <- bind_rows(dat_full_no, dat_full_en)
-  return(dat_full_combined)
+  return(data)
 }
 
 

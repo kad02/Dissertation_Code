@@ -258,8 +258,8 @@ dat_full
 Now we need to find the combined z and p values
 
 ```{r}
-ws_no <- weights(FALSE, lambda, tau)
-ws_en <- weights(TRUE, lambda, tau)
+ws_no <- weights(lambda, tau)
+ws_en <- weights(lambda, tau)
 
 dat_full_no <- dat_full %>%
   filter(enrich == FALSE)
@@ -308,7 +308,7 @@ tau <- 0.5
 sigma <- 22
 theta1 <- 0
 theta2 <- 10
-n_sim <- 100
+n_sim <- 10^4
 
 
 trial <- Trial(n_sim, n, lambda, tau, sigma, theta1, theta2)
@@ -317,4 +317,12 @@ trial
 ```
 
 
+```{r}
+trial %>%
+  summarise(
+    reject_13_c = mean(p13_c < 0.05),
+    reject_1_c = mean(p1_c < 0.05),
+    reject_3_c = mean(p3_c < 0.05)
+  )
+```
 
