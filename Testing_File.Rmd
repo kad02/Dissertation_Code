@@ -326,3 +326,62 @@ trial %>%
   )
 ```
 
+
+```{r}
+# Power of test
+
+
+trial %>%
+  select(p13_c, p1_c, p3_c) %>%
+  mutate(any_reject = if_any(everything(), ~ .x < 0.05)) %>%
+  summarise(power = mean(any_reject))
+
+```
+```{r}
+n <- 200
+lambda <- 0.5
+tau <- 0.5
+sigma <- 25
+theta1 <- 10
+theta2 <- 0
+n_sim <- 10^4
+
+
+Trial(n_sim, n, lambda, tau, sigma, theta1, theta2) %>%
+  summarise(
+    theta_3 = lambda * theta1 + (1 - lambda) * theta2,
+    prob_only_H1 = mean(p1_c < 0.05 & p13_c < 0.05 & p3_c >= 0.05),
+    prob_only_H3 = mean(p3_c < 0.05 & p13_c < 0.05 & p1_c >= 0.05),
+    prob_only_Both = mean(p3_c < 0.05 & p13_c < 0.05 & p1_c < 0.05)
+  )
+```
+
+
+```{r}
+stage1 <- StageOne(n_sim, n, lambda, tau, sigma, theta1, theta2)
+  
+  n_en <- sum(stage1$enrich)
+  n_not <- n_sim - n_en
+
+  
+  
+  
+  
+  
+  if(n_en == 0){
+    stage2_no_enrich <- StageTwo_NoEnrich(n_not, n, lambda, tau, sigma, theta1, theta2)
+    stage2 <- stage2_no_enrich
+  }else if(n_not == 0){
+    stage2_enrich <- StageTwo_Enrich(n_en, n, tau, sigma, theta1)
+    stage2 <- stage2_enrich
+  }else{
+    stage2_no_enrich <- StageTwo_NoEnrich(n_not, n, lambda, tau, sigma, theta1, theta2)
+    stage2_enrich <- StageTwo_Enrich(n_en, n, tau, sigma, theta1)
+    stage2 <- bind_rows(stage2_no_enrich, stage2_enrich)
+  }
+  
+  dat_full <- bind_cols(stage1, stage2)
+  
+  dat_full_combined <- Comb(dat_full, lambda, tau)
+```
+
