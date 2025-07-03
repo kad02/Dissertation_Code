@@ -119,7 +119,7 @@ weights <- function(lambda, tau){
 # Decision
 Decision_identity <- function(hat_theta1, hat_theta3){
   enrich <- hat_theta1 > hat_theta3
-  return(T)
+  return(FALSE)
 }
 
 

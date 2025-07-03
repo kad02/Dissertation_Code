@@ -341,47 +341,75 @@ trial %>%
 n <- 200
 lambda <- 0.5
 tau <- 0.5
-sigma <- 25
+sigma <- 13
 theta1 <- 10
-theta2 <- 0
+theta2 <- 10
 n_sim <- 10^4
 
 
-Trial(n_sim, n, lambda, tau, sigma, theta1, theta2) %>%
+trial <- Trial(n_sim, n, lambda, tau, sigma, theta1, theta2)
+
+
+trial %>%
   summarise(
     theta_3 = lambda * theta1 + (1 - lambda) * theta2,
-    prob_only_H1 = mean(p1_c < 0.05 & p13_c < 0.05 & p3_c >= 0.05),
-    prob_only_H3 = mean(p3_c < 0.05 & p13_c < 0.05 & p1_c >= 0.05),
-    prob_only_Both = mean(p3_c < 0.05 & p13_c < 0.05 & p1_c < 0.05)
+    prob_only_H1 = mean(p1_c < 0.025 & p13_c < 0.025 & p3_c >= 0.025),
+    prob_only_H3 = mean(p3_c < 0.025 & p13_c < 0.025 & p1_c >= 0.025),
+    prob_only_Both = mean(p3_c < 0.025 & p13_c < 0.025 & p1_c < 0.025)
   )
 ```
 
 
 ```{r}
-stage1 <- StageOne(n_sim, n, lambda, tau, sigma, theta1, theta2)
-  
-  n_en <- sum(stage1$enrich)
-  n_not <- n_sim - n_en
+trial %>%
+  summarise(
+    theta_3 = lambda * theta1 + (1 - lambda) * theta2,
+    prob_H1 = mean(p1_c < 0.025 & p13_c < 0.025),
+    prob_H3 = mean(p3_c < 0.025 & p13_c < 0.025),
+    FWER = mean((p1_c < 0.025 & p13_c < 0.025) | (p3_c < 0.025 & p13_c < 0.025)),
+    FWER2 = mean((p1_c < 0.025 & p13_c < 0.025 & p3_c >= 0.025) | (p3_c < 0.025 & p13_c < 0.025 & p1_c >= 0.025))
+  )
+```
 
-  
-  
-  
-  
-  
-  if(n_en == 0){
-    stage2_no_enrich <- StageTwo_NoEnrich(n_not, n, lambda, tau, sigma, theta1, theta2)
-    stage2 <- stage2_no_enrich
-  }else if(n_not == 0){
-    stage2_enrich <- StageTwo_Enrich(n_en, n, tau, sigma, theta1)
-    stage2 <- stage2_enrich
-  }else{
-    stage2_no_enrich <- StageTwo_NoEnrich(n_not, n, lambda, tau, sigma, theta1, theta2)
-    stage2_enrich <- StageTwo_Enrich(n_en, n, tau, sigma, theta1)
-    stage2 <- bind_rows(stage2_no_enrich, stage2_enrich)
-  }
-  
-  dat_full <- bind_cols(stage1, stage2)
-  
-  dat_full_combined <- Comb(dat_full, lambda, tau)
+```{r}
+trial %>%
+  summarise(
+    H13_only = mean(p1_c >= 0.025 & p13_c < 0.025 & p3_c >= 0.025),
+    H13 = mean(p13_c < 0.025)
+  )
+```
+
+
+oooooooooooooooooooooooooooooooooooooooooooooooooooo
+
+
+## Bayesian
+
+
+```{r}
+n <- 200
+lambda <- 0.5
+tau <- 0.5
+sigma <- 13
+
+n_sim <- 10^4
+
+
+
+theta1 <- rnorm(n_sim, mean = 10, sd = sigma)
+theta2 <- rnorm(n_sim, mean = 0, sd = sigma)
+
+
+
+trial <- Trial(n_sim, n, lambda, tau, sigma, theta1, theta2)
+
+
+trial %>%
+  summarise(
+    theta_3 = lambda * theta1 + (1 - lambda) * theta2,
+    prob_only_H1 = mean(p1_c < 0.025 & p13_c < 0.025 & p3_c >= 0.025),
+    prob_only_H3 = mean(p3_c < 0.025 & p13_c < 0.025 & p1_c >= 0.025),
+    prob_only_Both = mean(p3_c < 0.025 & p13_c < 0.025 & p1_c < 0.025)
+  )
 ```
 
