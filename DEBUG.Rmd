@@ -1,12 +1,27 @@
+---
+title: "DEBUG"
+output: html_document
+date: "2025-07-05"
+---
 
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(tidyverse)
+```
+
+# STAGE 1
+```{r}
 # STAGE 1
 StageOne <- function(n_sim, n, lambda, tau, sigma, theta1, theta2){
   # Calculate theta3
   theta3 <- lambda * theta1 + (1 - lambda) * theta2
   
   # Simulate the trial
-  hat_theta1_1 <- ifelse(rep(lambda != 0, n_sim), rnorm(n_sim, mean = theta1, sd = sqrt((4*sigma^2)/(tau*lambda*n))), rep(0, n_sim))
-  hat_theta2_1 <- ifelse(rep(lambda != 1, n_sim), rnorm(n_sim, mean = theta2, sd = sqrt((4*sigma^2)/(tau*(1-lambda)*n))), rep(0, n_sim))
+  hat_theta1_1 <- rnorm(n_sim, mean = theta1, sd = sqrt((4*sigma^2)/(tau*lambda*n)))
+  hat_theta2_1 <- rnorm(n_sim, mean = theta2, sd = sqrt((4*sigma^2)/(tau*(1-lambda)*n)))
   #hat_theta3_1 <- rnorm(n_sim, mean = theta3, sd = sqrt((4*sigma^2)/(tau*n)))
   
   hat_theta3_1 <- lambda * hat_theta1_1 + (1 - lambda) * hat_theta2_1
@@ -30,7 +45,13 @@ StageOne <- function(n_sim, n, lambda, tau, sigma, theta1, theta2){
   
   return(dat)
 }
+```
 
+# Stage 2
+
+## No enrich
+
+```{r}
 
 # STAGE 2
 StageTwo_NoEnrich <- function(n_not, n, lambda, tau, sigma, theta1, theta2) {
@@ -57,8 +78,11 @@ StageTwo_NoEnrich <- function(n_not, n, lambda, tau, sigma, theta1, theta2) {
     )
   return(no_en)
 }
+```
 
+## Enrich
 
+```{r}
 StageTwo_Enrich <- function(n_en, n, tau, sigma, theta1) {
   # Simulate the trial
   
@@ -77,17 +101,27 @@ StageTwo_Enrich <- function(n_en, n, tau, sigma, theta1) {
   return(en)
 }
 
+```
 
 
 
+# Simes
+
+```{r}
 # Intersection test
 simes_method <- function(p1, p3) {
   p13 <- pmin(2*pmin(p1,p3),pmax(p1, p3))
   
   return(p13)
 }
+```
 
 
+# Comb
+
+## Z vals
+
+```{r}
 # Combination
 win <- function(z_1, z_2, w1, w2){
   # Z value
@@ -95,15 +129,22 @@ win <- function(z_1, z_2, w1, w2){
   
   return(zc)
 }
+```
 
 
+## P-vals
+
+```{r}
 win_p <- function(p_1, p_2, w1, w2){
   # Z value
   zc <- w1*qnorm(1 - p_1) + w2*qnorm(1 - p_2)
   return(zc)
 }
+```
 
+## Weights
 
+```{r}
 weights <- function(lambda, tau){
   #if (Enrich) {
   #  w1 <- sqrt((tau*lambda)/(tau*lambda-tau+1))
@@ -118,16 +159,22 @@ weights <- function(lambda, tau){
   
   return(list(w1 = w1, w2 = w2))
 }
+```
 
+# Decision rule
 
-
+```{r}
 # Decision
 Decision_identity <- function(hat_theta1, hat_theta3){
   enrich <- hat_theta1 > hat_theta3
   return(enrich)
 }
+```
 
 
+# More comb
+
+```{r}
 # Combination stuff
 Comb <- function(data, lambda, tau){
   ws <- weights(lambda, tau)
@@ -143,11 +190,13 @@ Comb <- function(data, lambda, tau){
     )
   return(data)
 }
+```
 
 
 
+# Run trial
 
-
+```{r}
 Trial <- function(n_sim, n, lambda, tau, sigma, theta1, theta2){
   stage1 <- StageOne(n_sim, n, lambda, tau, sigma, theta1, theta2)
   
@@ -173,55 +222,52 @@ Trial <- function(n_sim, n, lambda, tau, sigma, theta1, theta2){
   
   return(dat_full_combined)
 }
+```
 
 
 
 
+# Testing vals
+
+```{r}
+n <- 348
+lambda <- 0.5
+tau <- 0.5
+sigma <- 25
+n_sim <- 10^4
 
 
 
+theta1 <- rnorm(n_sim, mean = 10, sd = sigma)
+theta2 <- rnorm(n_sim, mean = 0, sd = sigma)
 
 
 
+trial <- Trial(n_sim, n, lambda, tau, sigma, theta1, theta2)
 
 
-
-
-# Bayesian gain/utility function
-
-Utility <- function(trial, lambda, theta1, theta2){
-  
-  theta3 <- lambda * theta1 + (1 - lambda) * theta2
-  
-  only_H1 <- trial %>%
-    summarise(
-      prob_only_H1 = mean(p1_c < 0.025 & p13_c < 0.025 & p3_c >= 0.025)
-    ) %>%
-    pull(prob_only_H1)
-  
-  only_H3 <- trial %>%
-    summarise(
-      prob_only_H3 = mean(p3_c < 0.025 & p13_c < 0.025 & p1_c >= 0.025)
-    ) %>%
-    pull(prob_only_H3)
-  
-  only_Both <- trial %>%
-    summarise(
-      prob_only_Both = mean(p3_c < 0.025 & p13_c < 0.025 & p1_c < 0.025)
-    ) %>%
-    pull(prob_only_Both)
-  
-  
-  
-  gain <- lambda * theta1 * only_H1 + theta3 * only_H3 + theta3 * only_Both
-  
-  exp_gain <- lambda * mean(theta1) * only_H1 + mean(theta3) * only_H3 + mean(theta3) * only_Both
-  
-  return(list(
-    gain = mean(gain),
-    exp_gain = exp_gain
-    )
+trial %>%
+  reframe(
+    theta_3 = lambda * theta1 + (1 - lambda) * theta2,
+    prob_only_H1 = round(mean(p1_c < 0.025 & p13_c < 0.025 & p3_c >= 0.025), 3),
+    prob_only_H3 = round(mean(p3_c < 0.025 & p13_c < 0.025 & p1_c >= 0.025), 3),
+    prob_only_Both = round(mean(p3_c < 0.025 & p13_c < 0.025 & p1_c < 0.025), 3),
+    FWER = round(mean((p1_c < 0.025 & p13_c < 0.025) | (p3_c < 0.025 & p13_c < 0.025)), 3)
   )
-}
+```
 
+
+```{r}
+trial %>%
+  select(p13_c) %>%
+  summarise(
+    p13_c_mean = mean(p13_c),
+    p13_c_sd = sd(p13_c),
+    p13_c_min = min(p13_c),
+    p13_c_max = max(p13_c)
+  )
+
+
+trial[!complete.cases(trial),]
+```
 

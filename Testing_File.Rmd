@@ -9,342 +9,19 @@ knitr::opts_chunk$set(echo = TRUE)
 ```
 
 ```{r}
+library(tidyverse)
 source("Functions.R")
 ```
 
 
-# Testing
-
-
-Treatment effects stuffs - single stage only
-
 ```{r}
-theta1 <- 0
-sigma <- 22
-lambda <- 0.5
-n <- 200
-
-hat_theta1 <- rnorm(1, mean = theta1, sd = (4*sigma^2)/(lambda*n))
-hat_theta1
-
-
-
-theta2 <- 10
-hat_theta2 <- rnorm(1, mean = theta2, sd = (4*sigma^2)/((1-lambda)*n))
-hat_theta2
-
-
-
-theta3 <- lambda*theta1 + (1-lambda)*theta2
-hat_theta3 <- rnorm(1, mean = theta3, sd = (4*sigma^2)/n)
-hat_theta3
-
-
-
-```
-
-## Stage 1:
-
-```{r}
-tau <- 0.5
-lambda <- 0.5
-n <- 200
-sigma <- 22
-
-theta1 <- 0
-theta2 <- 10
-########
-
-theta3 <- lambda*theta1 + (1-lambda)*theta2
-
-hat_theta1_1 <- rnorm(1, mean = theta1, sd = sqrt((4*sigma^2)/(tau*lambda*n)))
-hat_theta2_1 <- rnorm(1, mean = theta2, sd = sqrt((4*sigma^2)/(tau*(1-lambda)*n)))
-hat_theta3_1 <- rnorm(1, mean = theta3, sd = sqrt((4*sigma^2)/(tau*n)))
-```
-
-
-
-## Stage 2:
-
-### No Enrichment:
-
-```{r}
-hat_theta1_2 <- rnorm(1, mean = theta1, sd = sqrt((4*sigma^2)/((1-tau)*lambda*n)))
-hat_theta2_2 <- rnorm(1, mean = theta2, sd = sqrt((4*sigma^2)/((1-tau)*(1-lambda)*n)))
-hat_theta3_2 <- rnorm(1, mean = theta3, sd = sqrt((4*sigma^2)/((1-tau)*n)))
-```
-
-### Enrichment:
-
-```{r}
-hat_theta1_2_enrich <- rnorm(1, mean = theta1, sd = sqrt((4*sigma^2)/((1-tau)*n)))
-```
-
-
-
-
-
-
-
-
-
-
-```{r}
-# Do a trial
-n <- 200
+n <- 348
 lambda <- 0.5
 tau <- 0.5
-sigma <- 22
-theta1 <- 0
-theta2 <- 10
-```
-
-
-
-
-
-
-
-
-
-Try to make it into data frames for vector calcs
-
-```{r}
-library(tidyverse)
-```
-
-```{r}
-theta3 <- lambda * theta1 + (1 - lambda) * theta2
-  
-# Simulate the trial
-hat_theta1_1 <- rnorm(5, mean = theta1, sd = sqrt((4*sigma^2)/(tau*lambda*n)))
-hat_theta2_1 <- rnorm(5, mean = theta2, sd = sqrt((4*sigma^2)/(tau*(1-lambda)*n)))
-hat_theta3_1 <- rnorm(5, mean = theta3, sd = sqrt((4*sigma^2)/(tau*n)))
-  
-dat <- data.frame(
-  stage = "Stage 1",
-  hat_theta1_1 = hat_theta1_1,
-  hat_theta2_1 = hat_theta2_1,
-  hat_theta3_1 = hat_theta3_1
-)
-dat
-```
-```{r}
-# Add z-values and p-values to the data frame
-
-dat <- dat %>%
-  mutate(
-    z1_1 = (sqrt(lambda*tau*n)*hat_theta1_1)/(2*sigma),
-    z3_1 = (sqrt(tau*n)*hat_theta3_1)/(2*sigma),
-    p1_1 = 1 - pnorm(z1_1),
-    p3_1 = 1 - pnorm(z3_1),
-    p_13_1 = simes_method(p1_1, p3_1)
-  )
-
-
-dat
-```
-
-
-
-
-STAGE 2
-
-```{r}
-dat2 <- data.frame(
-    stage = "Stage 2",
-    hat_theta1_2 = rnorm(5, mean = theta1, sd = sqrt((4*sigma^2)/((1-tau)*lambda*n))),
-    hat_theta2_2 = rnorm(5, mean = theta2, sd = sqrt((4*sigma^2)/((1-tau)*(1-lambda)*n))),
-    hat_theta3_2 = rnorm(5, mean = theta3, sd = sqrt((4*sigma^2)/((1-tau)*n)))
-  )
-dat2
-```
-```{r}
-dat2 <- dat2 %>%
-  mutate(
-    z1_2 = (sqrt((1-tau)*lambda*n)*hat_theta1_2)/(2*sigma),
-    z3_2 = (sqrt((1-tau)*n)*hat_theta3_2)/(2*sigma),
-    p1_2 = 1 - pnorm(z1_2),
-    p3_2 = 1 - pnorm(z3_2),
-    p_13_2 = simes_method(p1_2, p3_2),
-    enrich = rep(FALSE, 5)
-  )
-dat2
-```
-
-```{r}
-dat2e <- data.frame(
-    stage = "Stage 2",
-    hat_theta1_2 = rnorm(5, mean = theta1, sd = sqrt((4*sigma^2)/((1-tau)*n)))
-  )
-dat2e
-```
-```{r}
-dat2e <- dat2e %>%
-  mutate(
-    z1_2 = (sqrt((1-tau)*n)*hat_theta1_2)/(2*sigma),
-    p1_2 = 1 - pnorm(z1_2),
-    p_13_2 = p1_2,
-    enrich = rep(TRUE, 5)
-  )
-dat2e
-```
-
-
-
-```{r}
-dat_full <- bind_rows(dat, dat2, dat2e)
-dat_full
-```
-
-```{r}
-dat_full <- dat_full %>%
-  mutate(
-    P_13_1 = simes_method(p1_1, p3_1)
-  )
-
-dat_full
-```
-
-
-
-
-
-```{r}
-dat <- StageOne(n_sim = 5, n = 200, lambda = 0.5, tau = 0.5, sigma = 22, theta1 = 0, theta2 = 10)
-dat
-```
-
-
-
-col enrich - t or f
-
-ideally do it without if else
-
-reorder, group all t and all f
-
-get num for each
-
-use as num sim for stage 2 for each
-
-
-
-```{r}
-dat <- dat %>%
-  arrange(
-    enrich
-  )
-dat
-```
-
-```{r}
-num_enrich <- sum(dat$enrich)
-num_not <- nrow(dat) - num_enrich
-
-
-no_en <- StageTwo_NoEnrich(num_not, n = 200, lambda = 0.5, tau = 0.5, sigma = 22, theta1 = 0, theta2 = 10)
-
-en <- StageTwo_Enrich(num_enrich, n = 200, tau = 0.5, sigma = 22, theta1 = 0)
-
-
-dat2 <- bind_rows(no_en, en)
-dat2
-```
-```{r}
-dat_full <- bind_cols(dat, dat2)
-dat_full
-```
-
-Now we need to find the combined z and p values
-
-```{r}
-ws_no <- weights(lambda, tau)
-ws_en <- weights(lambda, tau)
-
-dat_full_no <- dat_full %>%
-  filter(enrich == FALSE)
-
-dat_full_en <- dat_full %>%
-  filter(enrich == TRUE)
-
-
-dat_full_no <- dat_full_no %>%
-  mutate(
-    z1_c = win(z1_1, z1_2, ws_no$w1, ws_no$w2),
-    z3_c = win(z3_1, z3_2, ws_no$w1, ws_no$w2),
-    z13_c = win_p(p_13_1, p_13_2, ws_no$w1, ws_no$w2),
-    p1_c = 1 - pnorm(z1_c),
-    p3_c = 1 - pnorm(z3_c),
-    p13_c = 1 - pnorm(z13_c)
-  )
-
-dat_full_en <- dat_full_en %>%
-  mutate(
-    z1_c = win(z1_2, z1_2, ws_en$w1, ws_en$w2),
-    z13_c = win_p(p_13_2, p_13_2, ws_en$w1, ws_en$w2),
-    p1_c = 1 - pnorm(z1_c),
-    p13_c = 1 - pnorm(z13_c)
-  )
-
-
-dat_full_combined <- bind_rows(dat_full_no, dat_full_en)
-dat_full_combined
-```
-
-
-```{r}
-dat_full_combined <- Comb(dat_full, lambda, tau)
-dat_full_combined
-```
-
-
-
-So the full trial can be done by:
-```{r}
-library(tidyverse)
-n <- 200
-lambda <- 0.5
-tau <- 0.5
-sigma <- 22
-theta1 <- 0
-theta2 <- 10
-n_sim <- 10^4
-
-
-trial <- Trial(n_sim, n, lambda, tau, sigma, theta1, theta2)
-
-trial
-```
-
-
-```{r}
-trial %>%
-  summarise(
-    reject_13_c = mean(p13_c < 0.05),
-    reject_1_c = mean(p1_c < 0.05),
-    reject_3_c = mean(p3_c < 0.05)
-  )
-```
-
-
-```{r}
-# Power of test
-
-
-trial %>%
-  select(p13_c, p1_c, p3_c) %>%
-  mutate(any_reject = if_any(everything(), ~ .x < 0.05)) %>%
-  summarise(power = mean(any_reject))
-
-```
-```{r}
-n <- 200
-lambda <- 0.5
-tau <- 0.5
-sigma <- 13
+sigma <- 25
 theta1 <- 10
 theta2 <- 10
-n_sim <- 10^4
+n_sim <- 10^6
 
 
 trial <- Trial(n_sim, n, lambda, tau, sigma, theta1, theta2)
@@ -353,31 +30,14 @@ trial <- Trial(n_sim, n, lambda, tau, sigma, theta1, theta2)
 trial %>%
   summarise(
     theta_3 = lambda * theta1 + (1 - lambda) * theta2,
-    prob_only_H1 = mean(p1_c < 0.025 & p13_c < 0.025 & p3_c >= 0.025),
-    prob_only_H3 = mean(p3_c < 0.025 & p13_c < 0.025 & p1_c >= 0.025),
-    prob_only_Both = mean(p3_c < 0.025 & p13_c < 0.025 & p1_c < 0.025)
+    prob_only_H1 = round(mean(p1_c < 0.025 & p13_c < 0.025 & p3_c >= 0.025), 3),
+    prob_only_H3 = round(mean(p3_c < 0.025 & p13_c < 0.025 & p1_c >= 0.025), 3),
+    prob_only_Both = round(mean(p3_c < 0.025 & p13_c < 0.025 & p1_c < 0.025), 3),
+    FWER = round(mean((p1_c < 0.025 & p13_c < 0.025) | (p3_c < 0.025 & p13_c < 0.025)), 3)
   )
 ```
 
 
-```{r}
-trial %>%
-  summarise(
-    theta_3 = lambda * theta1 + (1 - lambda) * theta2,
-    prob_H1 = mean(p1_c < 0.025 & p13_c < 0.025),
-    prob_H3 = mean(p3_c < 0.025 & p13_c < 0.025),
-    FWER = mean((p1_c < 0.025 & p13_c < 0.025) | (p3_c < 0.025 & p13_c < 0.025)),
-    FWER2 = mean((p1_c < 0.025 & p13_c < 0.025 & p3_c >= 0.025) | (p3_c < 0.025 & p13_c < 0.025 & p1_c >= 0.025))
-  )
-```
-
-```{r}
-trial %>%
-  summarise(
-    H13_only = mean(p1_c >= 0.025 & p13_c < 0.025 & p3_c >= 0.025),
-    H13 = mean(p13_c < 0.025)
-  )
-```
 
 
 oooooooooooooooooooooooooooooooooooooooooooooooooooo
@@ -387,11 +47,10 @@ oooooooooooooooooooooooooooooooooooooooooooooooooooo
 
 
 ```{r}
-n <- 200
+n <- 348
 lambda <- 0.5
 tau <- 0.5
-sigma <- 13
-
+sigma <- 25
 n_sim <- 10^4
 
 
@@ -407,9 +66,15 @@ trial <- Trial(n_sim, n, lambda, tau, sigma, theta1, theta2)
 trial %>%
   summarise(
     theta_3 = lambda * theta1 + (1 - lambda) * theta2,
-    prob_only_H1 = mean(p1_c < 0.025 & p13_c < 0.025 & p3_c >= 0.025),
-    prob_only_H3 = mean(p3_c < 0.025 & p13_c < 0.025 & p1_c >= 0.025),
-    prob_only_Both = mean(p3_c < 0.025 & p13_c < 0.025 & p1_c < 0.025)
+    prob_only_H1 = round(mean(p1_c < 0.025 & p13_c < 0.025 & p3_c >= 0.025), 3),
+    prob_only_H3 = round(mean(p3_c < 0.025 & p13_c < 0.025 & p1_c >= 0.025), 3),
+    prob_only_Both = round(mean(p3_c < 0.025 & p13_c < 0.025 & p1_c < 0.025), 3),
+    FWER = round(mean((p1_c < 0.025 & p13_c < 0.025) | (p3_c < 0.025 & p13_c < 0.025)), 3)
   )
+
+
+
+
+Utility(trial, lambda, theta1, theta2)
 ```
 
