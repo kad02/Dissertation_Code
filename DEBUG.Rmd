@@ -15,7 +15,7 @@ library(tidyverse)
 # STAGE 1
 ```{r}
 # STAGE 1
-StageOne <- function(n_sim, n, lambda, tau, sigma, theta1, theta2){
+StageOne_1 <- function(n_sim, n, lambda, tau, sigma, theta1, theta2, par){
   # Calculate theta3
   theta3 <- lambda * theta1 + (1 - lambda) * theta2
   
@@ -37,7 +37,7 @@ StageOne <- function(n_sim, n, lambda, tau, sigma, theta1, theta2){
       p1_1 = 1 - pnorm(z1_1),
       p3_1 = 1 - pnorm(z3_1),
       p_13_1 = simes_method(p1_1, p3_1),
-      enrich = Decision_identity(hat_theta1_1, hat_theta3_1)
+      enrich = Decision_identity_1(hat_theta1_1, hat_theta3_1, par)
     )%>%
     arrange(
       enrich
@@ -165,8 +165,8 @@ weights <- function(lambda, tau){
 
 ```{r}
 # Decision
-Decision_identity <- function(hat_theta1, hat_theta3){
-  enrich <- hat_theta1 > hat_theta3
+Decision_identity_1 <- function(hat_theta1, hat_theta3, par){
+  enrich <- hat_theta1 > par[1]*hat_theta3 + par[2]
   return(enrich)
 }
 ```
@@ -197,8 +197,8 @@ Comb <- function(data, lambda, tau){
 # Run trial
 
 ```{r}
-Trial <- function(n_sim, n, lambda, tau, sigma, theta1, theta2){
-  stage1 <- StageOne(n_sim, n, lambda, tau, sigma, theta1, theta2)
+Trial <- function(n_sim, n, lambda, tau, sigma, theta1, theta2, par){
+  stage1 <- StageOne_1(n_sim, n, lambda, tau, sigma, theta1, theta2, par)
   
   n_en <- sum(stage1$enrich)
   n_not <- n_sim - n_en
@@ -226,6 +226,60 @@ Trial <- function(n_sim, n, lambda, tau, sigma, theta1, theta2){
 
 
 
+# Utility
+
+```{r}
+# Bayesian gain/utility function
+
+Utility <- function(trial, lambda, theta1, theta2){
+  
+  theta3 <- lambda * theta1 + (1 - lambda) * theta2
+  
+  only_H1 <- trial %>%
+    summarise(
+      prob_only_H1 = mean(p1_c < 0.025 & p13_c < 0.025 & p3_c >= 0.025)
+    ) %>%
+    pull(prob_only_H1)
+  
+  only_H3 <- trial %>%
+    summarise(
+      prob_only_H3 = mean(p3_c < 0.025 & p13_c < 0.025 & p1_c >= 0.025)
+    ) %>%
+    pull(prob_only_H3)
+  
+  only_Both <- trial %>%
+    summarise(
+      prob_only_Both = mean(p3_c < 0.025 & p13_c < 0.025 & p1_c < 0.025)
+    ) %>%
+    pull(prob_only_Both)
+  
+  exp_gain <- lambda * mean(theta1) * only_H1 + mean(theta3) * only_H3 + mean(theta3) * only_Both
+  
+  return(
+    exp_gain = exp_gain
+    )
+}
+
+
+
+
+
+
+
+# Use this function to optimise the utility?
+
+Utility_Optimise <- function(n_sim, n, lambda, tau, sigma, theta1, theta2, par){
+  trial <- Trial(n_sim, n, lambda, tau, sigma, theta1, theta2, par)
+  
+  util <- Utility(trial, lambda, theta1, theta2)
+  
+  return(util)
+}
+```
+
+
+
+
 
 # Testing vals
 
@@ -234,40 +288,50 @@ n <- 348
 lambda <- 0.5
 tau <- 0.5
 sigma <- 25
-n_sim <- 10^4
+n_sim <- 10^6
 
 
 
-theta1 <- rnorm(n_sim, mean = 10, sd = sigma)
-theta2 <- rnorm(n_sim, mean = 0, sd = sigma)
+theta1 <- rnorm(n_sim, mean = 10, sd = 5)
+theta2 <- rnorm(n_sim, mean = 5, sd = 2)
 
 
 
-trial <- Trial(n_sim, n, lambda, tau, sigma, theta1, theta2)
+optim(Utility_Optimise, 
+       par = c(1, 0), 
+       n_sim = n_sim, 
+       n = n, 
+       lambda = lambda, 
+       tau = tau, 
+       sigma = sigma, 
+       theta1 = theta1, 
+       theta2 = theta2, 
+       method = "L-BFGS-B", 
+       lower = c(0, -Inf), 
+       upper = c(Inf, Inf),
+       control = list(fnscale = -1))
 
 
-trial %>%
-  reframe(
-    theta_3 = lambda * theta1 + (1 - lambda) * theta2,
-    prob_only_H1 = round(mean(p1_c < 0.025 & p13_c < 0.025 & p3_c >= 0.025), 3),
-    prob_only_H3 = round(mean(p3_c < 0.025 & p13_c < 0.025 & p1_c >= 0.025), 3),
-    prob_only_Both = round(mean(p3_c < 0.025 & p13_c < 0.025 & p1_c < 0.025), 3),
-    FWER = round(mean((p1_c < 0.025 & p13_c < 0.025) | (p3_c < 0.025 & p13_c < 0.025)), 3)
-  )
+# Results:
+
+'''
+$par
+[1] 2.783683 9.128746
+
+$value
+[1] 5.450139
+
+$counts
+function gradient 
+      42       42 
+
+$convergence
+[1] 0
+
+$message
+[1] "CONVERGENCE: REL_REDUCTION_OF_F <= FACTR*EPSMCH"
+'''
 ```
 
 
-```{r}
-trial %>%
-  select(p13_c) %>%
-  summarise(
-    p13_c_mean = mean(p13_c),
-    p13_c_sd = sd(p13_c),
-    p13_c_min = min(p13_c),
-    p13_c_max = max(p13_c)
-  )
-
-
-trial[!complete.cases(trial),]
-```
 

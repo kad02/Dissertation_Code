@@ -225,3 +225,20 @@ Utility <- function(trial, lambda, theta1, theta2){
 }
 
 
+
+
+
+
+
+# Use this function to optimise the utility?
+
+Utility_Optimise <- function(n_sim, n, lambda, tau, sigma, theta1, theta2){
+  trial <- Trial(n_sim, n, lambda, tau, sigma, theta1, theta2)
+  
+  util <- Utility(trial, lambda, theta1, theta2)
+  
+  return(util)
+}
+
+
+

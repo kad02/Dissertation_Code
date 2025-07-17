@@ -51,12 +51,12 @@ n <- 348
 lambda <- 0.5
 tau <- 0.5
 sigma <- 25
-n_sim <- 10^4
+n_sim <- 10^6
 
 
 
-theta1 <- rnorm(n_sim, mean = 10, sd = sigma)
-theta2 <- rnorm(n_sim, mean = 0, sd = sigma)
+theta1 <- rnorm(n_sim, mean = 0, sd = 5)
+theta2 <- rnorm(n_sim, mean = -10, sd = 2)
 
 
 
