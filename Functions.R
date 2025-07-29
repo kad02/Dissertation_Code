@@ -5,13 +5,16 @@ StageOne <- function(n_sim, n, lambda, tau, sigma, theta1, theta2){
   theta3 <- lambda * theta1 + (1 - lambda) * theta2
   
   # Simulate the trial
-  hat_theta1_1 <- ifelse(rep(lambda != 0, n_sim), rnorm(n_sim, mean = theta1, sd = sqrt((4*sigma^2)/(tau*lambda*n))), rep(0, n_sim))
-  hat_theta2_1 <- ifelse(rep(lambda != 1, n_sim), rnorm(n_sim, mean = theta2, sd = sqrt((4*sigma^2)/(tau*(1-lambda)*n))), rep(0, n_sim))
+  hat_theta1_1 <- rnorm(n_sim, mean = theta1, sd = sqrt((4*sigma^2)/(tau*lambda*n)))
+  hat_theta2_1 <- rnorm(n_sim, mean = theta2, sd = sqrt((4*sigma^2)/(tau*(1-lambda)*n)))
   #hat_theta3_1 <- rnorm(n_sim, mean = theta3, sd = sqrt((4*sigma^2)/(tau*n)))
   
   hat_theta3_1 <- lambda * hat_theta1_1 + (1 - lambda) * hat_theta2_1
   
   dat <- data.frame(
+    theta1 = theta1,
+    theta2 = theta2,
+    theta3 = theta3,
     hat_theta1_1 = hat_theta1_1,
     hat_theta2_1 = hat_theta2_1,
     hat_theta3_1 = hat_theta3_1
@@ -22,10 +25,6 @@ StageOne <- function(n_sim, n, lambda, tau, sigma, theta1, theta2){
       p1_1 = 1 - pnorm(z1_1),
       p3_1 = 1 - pnorm(z3_1),
       p_13_1 = simes_method(p1_1, p3_1),
-      enrich = Decision_identity(hat_theta1_1, hat_theta3_1)
-    )%>%
-    arrange(
-      enrich
     )
   
   return(dat)
@@ -122,8 +121,8 @@ weights <- function(lambda, tau){
 
 
 # Decision
-Decision_identity <- function(hat_theta1, hat_theta3){
-  enrich <- hat_theta1 > hat_theta3
+Decision_identity_1 <- function(hat_theta1, hat_theta3, par){
+  enrich <- hat_theta1 > par[1]*hat_theta3 + par[2]
   return(enrich)
 }
 
@@ -148,22 +147,36 @@ Comb <- function(data, lambda, tau){
 
 
 
-Trial <- function(n_sim, n, lambda, tau, sigma, theta1, theta2){
-  stage1 <- StageOne(n_sim, n, lambda, tau, sigma, theta1, theta2)
+Trial <- function(n_sim, n, lambda, tau, sigma, theta1, theta2, stage1, par){
+  
+  
+  stage1 <- stage1 %>%
+    mutate(
+      enrich = Decision_identity_1(hat_theta1_1, hat_theta3_1, par)
+    )%>%
+    arrange(
+      enrich
+    )
+  
   
   n_en <- sum(stage1$enrich)
   n_not <- n_sim - n_en
-
+  
+  theta1_en <- stage1$theta1[stage1$enrich]
+  
+  theta1_not <- stage1$theta1[!stage1$enrich]
+  theta2_not <- stage1$theta2[!stage1$enrich]
+  
   
   if(n_en == 0){
-    stage2_no_enrich <- StageTwo_NoEnrich(n_not, n, lambda, tau, sigma, theta1, theta2)
+    stage2_no_enrich <- StageTwo_NoEnrich(n_not, n, lambda, tau, sigma, theta1_not, theta2_not)
     stage2 <- stage2_no_enrich
   }else if(n_not == 0){
-    stage2_enrich <- StageTwo_Enrich(n_en, n, tau, sigma, theta1)
+    stage2_enrich <- StageTwo_Enrich(n_en, n, tau, sigma, theta1_en)
     stage2 <- stage2_enrich
   }else{
-    stage2_no_enrich <- StageTwo_NoEnrich(n_not, n, lambda, tau, sigma, theta1, theta2)
-    stage2_enrich <- StageTwo_Enrich(n_en, n, tau, sigma, theta1)
+    stage2_no_enrich <- StageTwo_NoEnrich(n_not, n, lambda, tau, sigma, theta1_not, theta2_not)
+    stage2_enrich <- StageTwo_Enrich(n_en, n, tau, sigma, theta1_en)
     stage2 <- bind_rows(stage2_no_enrich, stage2_enrich)
   }
   
@@ -211,16 +224,10 @@ Utility <- function(trial, lambda, theta1, theta2){
     ) %>%
     pull(prob_only_Both)
   
-  
-  
-  gain <- lambda * theta1 * only_H1 + theta3 * only_H3 + theta3 * only_Both
-  
   exp_gain <- lambda * mean(theta1) * only_H1 + mean(theta3) * only_H3 + mean(theta3) * only_Both
   
-  return(list(
-    gain = mean(gain),
+  return(
     exp_gain = exp_gain
-    )
   )
 }
 
@@ -232,8 +239,8 @@ Utility <- function(trial, lambda, theta1, theta2){
 
 # Use this function to optimise the utility?
 
-Utility_Optimise <- function(n_sim, n, lambda, tau, sigma, theta1, theta2){
-  trial <- Trial(n_sim, n, lambda, tau, sigma, theta1, theta2)
+Utility_Optimise <- function(n_sim, n, lambda, tau, sigma, theta1, theta2, stage1, par){
+  trial <- Trial(n_sim, n, lambda, tau, sigma, theta1, theta2, stage1, par)
   
   util <- Utility(trial, lambda, theta1, theta2)
   

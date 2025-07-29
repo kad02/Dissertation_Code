@@ -10,38 +10,9 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ```{r}
 library(tidyverse)
+library(purrr)
 source("Functions.R")
 ```
-
-
-```{r}
-n <- 348
-lambda <- 0.5
-tau <- 0.5
-sigma <- 25
-theta1 <- 10
-theta2 <- 10
-n_sim <- 10^6
-
-
-trial <- Trial(n_sim, n, lambda, tau, sigma, theta1, theta2)
-
-
-trial %>%
-  summarise(
-    theta_3 = lambda * theta1 + (1 - lambda) * theta2,
-    prob_only_H1 = round(mean(p1_c < 0.025 & p13_c < 0.025 & p3_c >= 0.025), 3),
-    prob_only_H3 = round(mean(p3_c < 0.025 & p13_c < 0.025 & p1_c >= 0.025), 3),
-    prob_only_Both = round(mean(p3_c < 0.025 & p13_c < 0.025 & p1_c < 0.025), 3),
-    FWER = round(mean((p1_c < 0.025 & p13_c < 0.025) | (p3_c < 0.025 & p13_c < 0.025)), 3)
-  )
-```
-
-
-
-
-oooooooooooooooooooooooooooooooooooooooooooooooooooo
-
 
 ## Bayesian
 
@@ -55,8 +26,8 @@ n_sim <- 10^6
 
 
 
-theta1 <- rnorm(n_sim, mean = 0, sd = 5)
-theta2 <- rnorm(n_sim, mean = -10, sd = 2)
+theta1 <- rnorm(n_sim, mean = 10, sd = 5)
+theta2 <- rnorm(n_sim, mean = 10, sd = 2)
 
 
 
@@ -75,6 +46,175 @@ trial %>%
 
 
 
-Utility(trial, lambda, theta1, theta2)
+round(Utility(trial, lambda, theta1, theta2),3)
+```
+
+```{r}
+n <- 348
+lambda <- 0.5
+tau <- 0.5
+sigma <- 25
+n_sim <- 10^6
+
+
+
+theta1 <- rnorm(n_sim, mean = 10, sd = 5)
+theta2 <- rnorm(n_sim, mean = 5, sd = 2)
+
+stage1 <- StageOne(n_sim, n, lambda, tau, sigma, theta1, theta2)
+
+
+
+
+start.time <- Sys.time()
+optim(Utility_Optimise, 
+       par = c(1, 0), 
+       n_sim = n_sim, 
+       n = n, 
+       lambda = lambda, 
+       tau = tau, 
+       sigma = sigma, 
+       theta1 = theta1, 
+       theta2 = theta2,
+       stage1 = stage1,
+       method = "BFGS",
+       control = list(fnscale = -1))
+
+end.time <- Sys.time()
+
+time.taken <- end.time - start.time
+time.taken
+```
+
+```{r}
+n <- 348
+lambda <- 0.5
+tau <- 0.5
+sigma <- 25
+n_sim <- 10^6
+
+
+
+#theta1 <- rnorm(n_sim, mean = 10, sd = 5)
+#theta2 <- rnorm(n_sim, mean = 5, sd = 2)
+
+theta1 <- 10
+theta2 <- 5
+
+stage1 <- StageOne(n_sim, n, lambda, tau, sigma, theta1, theta2)
+
+
+a_vals <- seq(3, 6, by = 0.2)
+b_vals <- seq(-2, 10, by = 0.2)
+grid <- expand.grid(a = a_vals, b = b_vals)
+
+
+grid$utility <- pmap_dbl(grid, function(a, b) {
+  print(c(a,b))
+  Utility_Optimise(n_sim, n, lambda, tau, sigma, theta1, theta2, stage1, c(a,b))
+})
+
+ggplot(grid, aes(x = a, y = b, z = utility)) +
+  geom_contour_filled() +
+  theme_minimal() +
+  labs(title = "Contour Plot of Expected Gain Using Oracle Decision Function",
+       x = "Slope (a)", y = "Intercept (b)",
+       fill = "Expected Gain")
+```
+
+
+
+
+
+```{r}
+df <- data.frame(
+  a = c(3.423, 5.001, 4.281),
+  b = c(1.217, -1.326, 7.847),
+  method = c("Nelder-Mead", "CG", "L-BFGS-B")
+)
+
+
+
+p1 <- ggplot(grid, aes(x = a, y = b, z = utility)) +
+  geom_contour_filled() +
+  theme_minimal() +
+  labs(title = "Contour Plot of Expected Gain Using Oracle Decision Function",
+       x = "Slope (a)", y = "Intercept (b)",
+       fill = "Utility")
+
+library(ggrepel)
+
+
+ggplot(df) +
+  geom_label_repel(aes(x = a, y = b, label = method), size = 3)
+
+
+ggplot() +
+  geom_contour_filled(data = grid, aes(x = a, y = b, z = utility)) +
+  geom_point(color = "white", size = 3, data = df, aes(x = a, y = b, label = method)) +
+  geom_label_repel(data = df, aes(x = a, y = b, box.padding   = 0.35, 
+                  point.padding = 0.5, label = method), size = 3) +
+  theme_minimal() +
+  labs(title = "Zoomed Contour Plot of Expected Gain, with Optimisation Method Guesses",
+       x = "Slope (a)", y = "Intercept (b)",
+       fill = "Expected Gain")
+```
+
+
+
+
+
+
+
+```{r}
+n <- 348
+lambda <- 0.5
+tau <- 0.5
+sigma <- 25
+n_sim <- 10^6
+
+
+
+theta1 <- rnorm(n_sim, mean = 10, sd = 5)
+theta2 <- rnorm(n_sim, mean = 5, sd = 2)
+
+stage1 <- StageOne(n_sim, n, lambda, tau, sigma, theta1, theta2)
+
+
+
+
+
+
+op <- sapply(
+  seq_len(optim(Utility_Optimise, 
+       par = c(1, 0), 
+       n_sim = n_sim, 
+       n = n, 
+       lambda = lambda, 
+       tau = tau, 
+       sigma = sigma, 
+       theta1 = theta1, 
+       theta2 = theta2,
+       stage1 = stage1,
+       method = "BFGS",
+       control = list(fnscale = -1))$counts['function']), 
+  function(i) {
+    optim(Utility_Optimise, 
+       par = c(1, 0), 
+       n_sim = n_sim, 
+       n = n, 
+       lambda = lambda, 
+       tau = tau, 
+       sigma = sigma, 
+       theta1 = theta1, 
+       theta2 = theta2,
+       stage1 = stage1,
+       method = "BFGS",
+       control = list(fnscale = -1, maxit = i))$par
+  }
+)
+
+op_df <- data.frame(b0 = op[1,], b1 = op[2,])
+op_df$step <- 1:nrow(op_df)
 ```
 

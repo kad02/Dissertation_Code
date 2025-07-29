@@ -1,9 +1,7 @@
 ---
-title: "DEBUG"
+title: "TEST2"
 output: html_document
-date: "2025-07-05"
-editor_options: 
-  chunk_output_type: inline
+date: "2025-07-22"
 ---
 
 ```{r setup, include=FALSE}
@@ -17,7 +15,7 @@ library(tidyverse)
 # STAGE 1
 ```{r}
 # STAGE 1
-StageOne_1 <- function(n_sim, n, lambda, tau, sigma, theta1, theta2, par){
+StageOne_2 <- function(n_sim, n, lambda, tau, sigma, theta1, theta2){
   # Calculate theta3
   theta3 <- lambda * theta1 + (1 - lambda) * theta2
   
@@ -42,10 +40,6 @@ StageOne_1 <- function(n_sim, n, lambda, tau, sigma, theta1, theta2, par){
       p1_1 = 1 - pnorm(z1_1),
       p3_1 = 1 - pnorm(z3_1),
       p_13_1 = simes_method(p1_1, p3_1),
-      enrich = Decision_identity_1(hat_theta1_1, hat_theta3_1, par)
-    )%>%
-    arrange(
-      enrich
     )
   
   return(dat)
@@ -202,8 +196,17 @@ Comb <- function(data, lambda, tau){
 # Run trial
 
 ```{r}
-Trial <- function(n_sim, n, lambda, tau, sigma, theta1, theta2, par){
-  stage1 <- StageOne_1(n_sim, n, lambda, tau, sigma, theta1, theta2, par)
+Trial2 <- function(n_sim, n, lambda, tau, sigma, theta1, theta2, stage1, par){
+  
+  
+  stage1 <- stage1 %>%
+    mutate(
+      enrich = Decision_identity_1(hat_theta1_1, hat_theta3_1, par)
+    )%>%
+    arrange(
+      enrich
+    )
+  
   
   n_en <- sum(stage1$enrich)
   n_not <- n_sim - n_en
@@ -278,8 +281,8 @@ Utility <- function(trial, lambda, theta1, theta2){
 
 # Use this function to optimise the utility?
 
-Utility_Optimise <- function(n_sim, n, lambda, tau, sigma, theta1, theta2, par){
-  trial <- Trial(n_sim, n, lambda, tau, sigma, theta1, theta2, par)
+Utility_Optimise2 <- function(n_sim, n, lambda, tau, sigma, theta1, theta2, stage1, par){
+  trial <- Trial2(n_sim, n, lambda, tau, sigma, theta1, theta2, stage1, par)
   
   util <- Utility(trial, lambda, theta1, theta2)
   
@@ -305,9 +308,13 @@ n_sim <- 10^6
 theta1 <- rnorm(n_sim, mean = 10, sd = 5)
 theta2 <- rnorm(n_sim, mean = 5, sd = 2)
 
+stage1 <- StageOne_2(n_sim, n, lambda, tau, sigma, theta1, theta2)
+
+
+
 
 start.time <- Sys.time()
-optim(Utility_Optimise, 
+optim(Utility_Optimise2, 
        par = c(1, 0), 
        n_sim = n_sim, 
        n = n, 
@@ -315,8 +322,9 @@ optim(Utility_Optimise,
        tau = tau, 
        sigma = sigma, 
        theta1 = theta1, 
-       theta2 = theta2, 
-       method = "L-BFGS-B",
+       theta2 = theta2,
+       stage1 = stage1,
+       method = "BFGS",
        control = list(fnscale = -1))
 
 end.time <- Sys.time()
@@ -327,96 +335,5 @@ time.taken
 
 
 
-```{r}
-x <- seq(from = -10, to = 10, by = 0.1)
-y <- seq(from = -10, to = 10, by = 0.1)
 
-
-
-df <- data.frame(
-  a = c(3.423431, 2.154534, 5.001309, 4.280988, 2.827594),
-  b = c(1.216671, 4.959926, -1.326052, 7.846524, -1.330434),
-  gain = c(5.859758, 5.84191, 5.865333, 5.856235, 5.840365),
-  time = c(3.255211, 1.982385, 1.600207, 2.40418, 2.076199),
-  method = c("Nelder-Mead", "BFGS", "CG", "L-BFGS-B", "SANN")
-)
-
-
-
-
-
-
-
-
-ggplot(df, aes(group = method, color = method)) +
-  geom_abline(aes(intercept = b, slope = a), size = 1) +
-  xlim(-10, 10) +
-  ylim(-10, 10) +
-  labs(title = "Lines Plot by Method",
-       x = "X-axis", 
-       y = "Y-axis")
-```
-
-
-
-```{r}
-library(latex2exp)
-
-x <- seq(from = -20, to = 20, by = 0.1)
-
-# Expand the df to have y = ax + b for each method
-lines_df <- df %>%
-  rowwise() %>%
-  mutate(data = list(data.frame(
-    x = x,
-    y = a * x + b,
-    method = method
-  ))) %>%
-  pull(data) %>%
-  bind_rows()
-
-# Plot using ggplot2
-ggplot(lines_df, aes(x = x, y = y, color = method)) +
-  geom_line(size = 1) +
-  theme_minimal() +
-  labs(title = "Optimal Decision Rules for Different Optimization Methods",
-       x = TeX("$\\hat{\\theta}_3^{(1)}$"), y = TeX("$\\hat{\\theta}_1^{(1)}$"),
-       color = "Method")
-```
-
-
-
-
-
-
-```{r}
-n <- 348
-lambda <- 0.5
-tau <- 0.5
-sigma <- 25
-n_sim <- 10^6
-
-
-
-theta1 <- rnorm(n_sim, mean = 10, sd = 5)
-theta2 <- rnorm(n_sim, mean = 5, sd = 2)
-
-
-a_vals <- seq(-15, 15, by = 1 )
-b_vals <- seq(-50, 50, by = 5)
-grid <- expand.grid(a = a_vals, b = b_vals)
-
-
-grid$utility <- pmap_dbl(grid, function(a, b) {
-  print(c(a,b))
-  Utility_Optimise(n_sim, n, lambda, tau, sigma, theta1, theta2, c(a,b))
-})
-
-ggplot(grid, aes(x = a, y = b, z = utility)) +
-  geom_contour_filled() +
-  theme_minimal() +
-  labs(title = "Contour Plot of Expected Gain Using Normal Prior",
-       x = "Slope (a)", y = "Intercept (b)",
-       fill = "Utility")
-```
 
