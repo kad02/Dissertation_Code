@@ -98,14 +98,14 @@ n_sim <- 10^6
 #theta1 <- rnorm(n_sim, mean = 10, sd = 5)
 #theta2 <- rnorm(n_sim, mean = 5, sd = 2)
 
-theta1 <- 10
-theta2 <- 5
+theta1 <- 5
+theta2 <- 4
 
 stage1 <- StageOne(n_sim, n, lambda, tau, sigma, theta1, theta2)
 
 
-a_vals <- seq(3, 6, by = 0.2)
-b_vals <- seq(-2, 10, by = 0.2)
+a_vals <- seq(-15, 15, by = (5/3))
+b_vals <- seq(-25, 25, by = (5/3))
 grid <- expand.grid(a = a_vals, b = b_vals)
 
 
@@ -117,7 +117,7 @@ grid$utility <- pmap_dbl(grid, function(a, b) {
 ggplot(grid, aes(x = a, y = b, z = utility)) +
   geom_contour_filled() +
   theme_minimal() +
-  labs(title = "Contour Plot of Expected Gain Using Oracle Decision Function",
+  labs(title = "Plot of Expected Gain with theta1 = 5, theta2 = 4",
        x = "Slope (a)", y = "Intercept (b)",
        fill = "Expected Gain")
 ```
