@@ -120,11 +120,47 @@ weights <- function(lambda, tau){
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 # Decision
-Decision_identity_1 <- function(hat_theta1, hat_theta3, par){
-  enrich <- hat_theta1 > par[1]*hat_theta3 + par[2]
+Decision_identity_1 <- function(hat_theta1, hat_theta2, par){
+  enrich <- hat_theta2 < par[1]*hat_theta1 + par[2]
+  
   return(enrich)
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 # Combination stuff
@@ -152,7 +188,7 @@ Trial <- function(n_sim, n, lambda, tau, sigma, theta1, theta2, stage1, par){
   
   stage1 <- stage1 %>%
     mutate(
-      enrich = Decision_identity_1(hat_theta1_1, hat_theta3_1, par)
+      enrich = Decision_identity_1(hat_theta1_1, hat_theta2_1, par)
     )%>%
     arrange(
       enrich
@@ -225,6 +261,9 @@ Utility <- function(trial, lambda, theta1, theta2){
     pull(prob_only_Both)
   
   exp_gain <- lambda * mean(theta1) * only_H1 + mean(theta3) * only_H3 + mean(theta3) * only_Both
+  
+  # Thomas gain:
+  #exp_gain <- lambda * mean(theta1) * only_H1 + mean(theta3) * only_H3
   
   return(
     exp_gain = exp_gain
