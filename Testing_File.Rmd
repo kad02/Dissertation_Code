@@ -48,7 +48,7 @@ theta2 <- thetas[, 2]
 
 stage1 <- StageOne(n_sim, n, lambda, tau, sigma, theta1, theta2)
 
-
+start_time <- Sys.time()
 
 res <- optim(Utility_Optimise, 
        par = c(-1, 10), 
@@ -62,7 +62,7 @@ res <- optim(Utility_Optimise,
        stage1 = stage1,
        method = "BFGS",
        control = list(fnscale = -1))
-
+end_time <- Sys.time()
 
 df <- data.frame(
   a = res$par[1],
@@ -72,7 +72,7 @@ df <- data.frame(
 
 df
 
-
+end_time - start_time
 
 
 
